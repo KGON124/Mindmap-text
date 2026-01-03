@@ -80,5 +80,13 @@ export const useMandalaData = () => {
         });
     }, []);
 
-    return { data, updateCell };
+    const setFullData = (newData: MandalaChartData) => {
+        setData(newData);
+    };
+
+    return {
+        data,
+        updateCell,
+        setFullData
+    };
 };

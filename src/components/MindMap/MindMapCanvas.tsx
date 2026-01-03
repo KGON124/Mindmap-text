@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useMindMapData } from './useMindMapData';
 import type { MindMapNode } from '../../types';
 import { exportMindMap } from '../../utils/export';
 
@@ -9,12 +8,26 @@ import { exportMindMap } from '../../utils/export';
 // Visual connection lines are nice, but for "typing repeatedly", an outliner or tree view is best.
 // Let's do a hierarchical list with CSS lines.
 
-interface Props { }
+interface Props {
+    root: MindMapNode;
+    updateNodeText: (id: string, text: string) => void;
+    addSibling: (id: string) => void;
+    addChild: (id: string) => void;
+    removeNodes: (ids: string[]) => void;
+}
 
-export const MindMapView: React.FC<Props> = () => {
-    const { root, updateNodeText, addSibling, addChild, removeNodes } = useMindMapData();
+export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling, addChild, removeNodes }) => {
+    // Local UI state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([root.id]));
     const [lastFocusedId, setLastFocusedId] = useState<string>(root.id); // For Shift+Click range anchor
+
+    useEffect(() => {
+        // Reset selection if root changes (e.g. import)
+        if (!selectedIds.has(root.id) && selectedIds.size === 0) {
+            setSelectedIds(new Set([root.id]));
+            setLastFocusedId(root.id);
+        }
+    }, [root.id]);
 
     // Flatten the tree for navigation order
     const getVisibleNodes = useCallback((node: MindMapNode, list: MindMapNode[] = []): MindMapNode[] => {
@@ -115,22 +128,23 @@ export const MindMapView: React.FC<Props> = () => {
 
     return (
         <div className="flex flex-col h-full w-full max-w-4xl mx-auto p-4 gap-4">
-            <div className="flex gap-4 items-center justify-between glass-panel p-4">
-                <div className="text-sm text-gray-400 space-x-4">
-                    <span><kbd className="bg-gray-800 px-2 py-1 rounded">Enter</kbd> Sibling</span>
-                    <span><kbd className="bg-gray-800 px-2 py-1 rounded">Tab</kbd> Child</span>
-                    <span><kbd className="bg-gray-800 px-2 py-1 rounded">Shift+Arrows</kbd> Select</span>
-                    <span><kbd className="bg-gray-800 px-2 py-1 rounded">Ctrl+Delete</kbd> Delete</span>
+            <div className="flex gap-4 items-center justify-between pop-card px-6 py-3">
+                <div className="text-sm text-slate-500 font-bold space-x-4 flex items-center">
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Enter</kbd> Sibling</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Arr</kbd> Select</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Ctrl+Del</kbd> Delete</span>
                 </div>
                 <button
                     onClick={copyToClipboard}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-all"
+                    className="pop-btn pop-btn-neutral text-sm"
                 >
-                    Export Text
+                    📋 Export Text
                 </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-8 glass-panel">
+            <div className="flex-1 overflow-auto p-8 popup-container">
+                {/* No background panel for the map itself to feel "infinite" or clean */}
                 <NodeView
                     node={root}
                     selectedIds={selectedIds}
@@ -171,9 +185,9 @@ const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSel
         <div className="flex items-center">
             {/* Node Card */}
             <div
-                className={`relative z-10 flex items-center p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer shadow-lg min-w-[120px] max-w-[200px] ${isSelected
-                    ? 'bg-blue-900/40 border-blue-500 shadow-blue-500/20'
-                    : 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                className={`relative z-10 flex items-center p-3 rounded-full border-2 transition-all duration-200 cursor-pointer shadow-sm min-w-[120px] max-w-[240px] ${isSelected
+                    ? 'bg-white border-pop-blue ring-4 ring-pop-blue-light/40 shadow-xl shadow-blue-200 scale-105'
+                    : 'bg-white border-slate-200 hover:border-pop-blue-light hover:shadow-lg hover:-translate-y-0.5'
                     }`}
                 onClick={(e) => onSelect(e, node.id)}
             >
@@ -183,11 +197,11 @@ const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSel
                         value={node.text}
                         onChange={(e) => onUpdate(node.id, e.target.value)}
                         onKeyDown={(e) => onKeyDown(e, node.id)}
-                        className="bg-transparent border-none focus:outline-none w-full text-white text-center font-medium"
+                        className="bg-transparent border-none focus:outline-none w-full text-pop-text text-center font-bold"
                     />
                 ) : (
                     <div
-                        className={`w-full text-center outline-none break-words ${isSelected ? 'text-blue-100 font-semibold' : 'text-gray-300'}`}
+                        className={`w-full text-center outline-none break-words ${isSelected ? 'text-pop-blue-dark font-black' : 'text-slate-600 font-bold'}`}
                         tabIndex={isSelected ? 0 : -1}
                         onKeyDown={(e) => isSelected && onKeyDown(e, node.id)}
                         ref={(el) => { if (isSelected && lastFocusedId === node.id) el?.focus(); }}
@@ -201,56 +215,25 @@ const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSel
             {node.children && node.children.length > 0 && (
                 <div className="flex items-center">
                     {/* Horizontal Connector from Parent to Children Column */}
-                    <div className="w-8 h-[2px] bg-gray-700"></div>
+                    <div className="w-8 h-[3px] bg-slate-300 rounded-full"></div>
 
                     {/* Children Column */}
                     <div className="flex flex-col gap-4 relative">
                         {/* Vertical Line for branching */}
-                        {/* Using a pseudo-element on the column container usually doesn't work well due to height.
-                    Instead, we put the vertical bar on each child to connect to top/bottom neighbor?
-                    Standard trick: Vertical line on the left of children list.
-                    But it needs to stop at the last child's center.
-                */}
-
-                        {/* Connector Logic:
-                    We draw a vertical line on the LEFT of the children column.
-                    It spans from Top of First Child to Top of Last Child.
-                    Each child draws a horizontal line to the left to meet it.
-                */}
-                        {node.children.length > 1 && (
-                            <div
-                                className="absolute bg-gray-700 w-[2px]"
-                                style={{
-                                    left: 0,
-                                    top: '50%', // Logic roughly: offset to align with child centers?
-                                    // This is hard to do with dynamic heights without JS config.
-                                    // Fallback: A simple vertical border on the left that spans full height? No.
-                                }}
-                            ></div>
-                        )}
-
-                        {/* Better CSS Tree without JS calculations:
-                    Wrapper for Children: Flex-Col.
-                    Each Child Wrapper: Flex-Row (Line -- Node).
-                    Wait, if I just output a vertical line in each child wrapper, I can mask it.
-                */}
+                        {/* Logic: Vertical backbone on the left edge of the children column */}
 
                         {node.children.map((child, idx) => (
                             <div key={child.id} className="relative flex items-center">
                                 {/* Vertical Line Segment */}
-                                {/* If multiple children, we need a vertical backbone.
-                            The backbone is at the left edge.
-                        */}
                                 {node.children.length > 1 && (
-                                    <div className={`absolute left-0 w-[2px] bg-gray-700 ${idx === 0 ? 'h-1/2 top-1/2' :
-                                        idx === node.children.length - 1 ? 'h-1/2 bottom-1/2' : 'h-full'
+                                    <div className={`absolute left-0 w-[3px] bg-slate-300 ${idx === 0 ? 'h-1/2 top-1/2 rounded-tl-full' :
+                                        idx === node.children.length - 1 ? 'h-1/2 bottom-1/2 rounded-bl-full' : 'h-full'
                                         }`}></div>
                                 )}
 
                                 {/* Horizontal Line to Child */}
-                                {/* If single child, straight line. If multiple, it branches from the vertical backbone. */}
                                 {node.children.length > 0 && (
-                                    <div className="w-8 h-[2px] bg-gray-700"></div>
+                                    <div className="w-8 h-[3px] bg-slate-300 rounded-r-full"></div>
                                 )}
 
                                 <NodeView

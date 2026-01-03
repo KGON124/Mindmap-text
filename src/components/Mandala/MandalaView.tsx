@@ -1,33 +1,34 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { useMandalaData } from './useMandalaData';
-import type { MandalaGridData } from '../../types';
+import type { MandalaChartData, MandalaGridData } from '../../types';
 import { exportMandala } from '../../utils/export';
 
 
 
-interface Props { }
+interface Props {
+    data: MandalaChartData;
+    updateCell: (type: 'center' | 'surrounding', gridIndex: number, cellIndex: number, text: string) => void;
+}
 
-export const MandalaView: React.FC<Props> = () => {
-    const { data, updateCell } = useMandalaData();
-    const [focused, setFocused] = useState<{ grid: number; cell: number } | null>({ grid: 4, cell: 4 }); // Grid 4 is Center Grid.
+export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
+    const [focused, setFocused] = useState<{ grid: number; cell: number } | null>(null);
     // We treat the whole 9x9 as a grid of grids.
     // 0-8 are the grids. 4 is the Center Grid.
     // Cell 0-8 within that grid.
 
     // Helper to handle navigation
-    const handleKeyDown = (e: React.KeyboardEvent, gridIndex: number, cellIndex: number) => {
+    const handleKeyDown = (e: React.KeyboardEvent, gridIdx: number, cellIdx: number) => {
         // Current Global Position
         // We can map everything to global coordinates (0-8, 0-8)
         // Grid (gx, gy) 3x3. Cell (cx, cy) 3x3.
         // Global X = gx * 3 + cx. Global Y = gy * 3 + cy.
 
         // Grid Index -> gx, gy
-        const gx = gridIndex % 3;
-        const gy = Math.floor(gridIndex / 3);
+        const gx = gridIdx % 3;
+        const gy = Math.floor(gridIdx / 3);
 
         // Cell Index -> cx, cy
-        const cx = cellIndex % 3;
-        const cy = Math.floor(cellIndex / 3);
+        const cx = cellIdx % 3;
+        const cy = Math.floor(cellIdx / 3);
 
         let nextGx = gx;
         let nextGy = gy;
@@ -71,14 +72,14 @@ export const MandalaView: React.FC<Props> = () => {
             <div className="flex gap-4 items-center">
                 <button
                     onClick={copyToClipboard}
-                    className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-700 shadow-sm transition-all"
+                    className="pop-btn pop-btn-neutral text-sm"
                 >
-                    Export / Copy Text
+                    📋 Export / Copy Text
                 </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 p-4 bg-gray-900/50 rounded-2xl border border-gray-800 shadow-2xl">
-                {/* We render 9 Grids */}
+            <div className="grid grid-cols-3 gap-4 p-4 ">
+                {/* We render 9 Grids. No outer decorative container, just the grids floating or in a subtle group */}
                 {Array.from({ length: 9 }).map((_, gridIdx) => {
                     let gridData: MandalaGridData;
                     let isCenterGrid = false;
@@ -93,9 +94,9 @@ export const MandalaView: React.FC<Props> = () => {
                     return (
                         <div
                             key={gridIdx}
-                            className={`grid grid-cols-3 gap-1 p-1 rounded-lg border transition-all duration-300 ${isCenterGrid
-                                ? 'bg-orange-900/20 border-orange-500/30'
-                                : 'bg-gray-800/40 border-gray-700/50'
+                            className={`grid grid-cols-3 gap-1 p-2 rounded-2xl border-4 transition-all duration-300 shadow-sm ${isCenterGrid
+                                ? 'bg-orange-50 border-pop-orange shadow-orange-100'
+                                : 'bg-white border-white shadow-slate-200/50'
                                 }`}
                         >
                             {gridData.cells.map((cell, cellIdx) => {
@@ -189,20 +190,27 @@ const Cell: React.FC<CellProps> = ({ text, isFocused, isCenter, isCore, onChange
         // Allow default typing behavior
     };
 
-    // Dynamic Classes
-    const baseClasses = "relative w-20 h-20 md:w-24 md:h-24 flex items-center justify-center cursor-pointer text-center text-xs md:text-sm p-1 transition-all duration-200";
+    // Dynamic Classes for Pop Design
+    const baseClasses = "relative w-24 h-24 flex items-center justify-center cursor-pointer text-center text-sm p-1 transition-all duration-200 rounded-xl border-2";
 
-    let colorClasses = "bg-gray-800 text-gray-300 hover:bg-gray-700";
-    if (isCore) colorClasses = "bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/40 hover:bg-orange-500";
-    else if (isCenter) colorClasses = "bg-orange-900/40 text-orange-100 font-medium hover:bg-orange-900/60";
+    let colorClasses = "bg-pop-bg border-pop-border text-pop-text hover:bg-white hover:border-pop-blue-light";
+
+    if (isCore) {
+        // Center Grid Center Cell (Main Goal)
+        colorClasses = "bg-pop-orange text-white border-pop-orange-dark font-black text-lg shadow-md shadow-orange-200";
+    } else if (isCenter) {
+        // Surrounding Grid Center Cell (Sub Goals)
+        colorClasses = "bg-orange-100 text-pop-orange-dark border-orange-200 font-bold hover:bg-orange-50";
+    }
 
     if (isFocused) {
-        colorClasses += " ring-2 ring-blue-400 z-10 scale-105 shadow-xl";
+        colorClasses += " z-10 scale-105 shadow-xl shadow-blue-200 border-pop-blue ring-4 ring-pop-blue-light/50";
+        if (isCore) colorClasses += " ring-pop-orange-light/50 border-white";
     }
 
     return (
         <div
-            className={`${baseClasses} ${colorClasses} rounded-md`}
+            className={`${baseClasses} ${colorClasses}`}
             onClick={() => { onFocus(); setEditMode(true); }}
         >
             {editMode ? (
@@ -213,17 +221,18 @@ const Cell: React.FC<CellProps> = ({ text, isFocused, isCenter, isCore, onChange
                     onKeyDown={handleInputKeyDown}
                     onBlur={commitChange}
                     placeholder={placeholder}
-                    className="w-full h-full bg-transparent resize-none outline-none text-center"
+                    className="w-full h-full bg-transparent resize-none outline-none text-center font-bold"
+                    style={{ color: isCore ? 'white' : 'inherit' }}
                 />
             ) : (
                 <div
                     ref={containerRef}
                     tabIndex={0}
-                    className="w-full h-full flex items-center justify-center outline-none break-words whitespace-pre-wrap overflow-hidden"
+                    className="w-full h-full flex items-center justify-center outline-none break-words whitespace-pre-wrap overflow-hidden leading-tight font-medium"
                     onKeyDown={handleContainerKeyDown}
                     onFocus={onFocus}
                 >
-                    {text || (placeholder && <span className="opacity-50 italic">{placeholder}</span>)}
+                    {text || (placeholder && <span className="opacity-60 italic font-normal text-xs">{placeholder}</span>)}
                 </div>
             )}
         </div>

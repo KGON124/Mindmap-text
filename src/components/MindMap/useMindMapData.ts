@@ -10,7 +10,7 @@ const INITIAL_TREE: MindMapNode = {
 };
 
 export const useMindMapData = () => {
-    const [root, setRoot] = useState<MindMapNode>(INITIAL_TREE);
+    const [root, setTreeRoot] = useState<MindMapNode>(INITIAL_TREE);
 
     // Helper to find node and parent
     // We might not need parent often if we pass it down or search, but for deletion/sibling creation we do.
@@ -25,7 +25,7 @@ export const useMindMapData = () => {
     };
 
     const updateNodeText = useCallback((id: string, text: string) => {
-        setRoot(prev => {
+        setTreeRoot(prev => {
             const clone = JSON.parse(JSON.stringify(prev)); // Deep clone for simplicity in MVP
             const path = findNodePath(clone, id);
             if (path) {
@@ -37,7 +37,7 @@ export const useMindMapData = () => {
     }, []);
 
     const addSibling = useCallback((referenceId: string) => {
-        setRoot(prev => {
+        setTreeRoot(prev => {
             if (referenceId === prev.id) return prev; // Cannot add sibling to root
             const clone = JSON.parse(JSON.stringify(prev));
             const path = findNodePath(clone, referenceId);
@@ -53,7 +53,7 @@ export const useMindMapData = () => {
     }, []);
 
     const addChild = useCallback((parentId: string) => {
-        setRoot(prev => {
+        setTreeRoot(prev => {
             const clone = JSON.parse(JSON.stringify(prev));
             const path = findNodePath(clone, parentId);
             if (path) {
@@ -68,7 +68,7 @@ export const useMindMapData = () => {
     }, []);
 
     const removeNodes = useCallback((ids: string[]) => {
-        setRoot(prev => {
+        setTreeRoot(prev => {
             // Recursive filter? Or just traverse and splice.
             // Easier to rebuild tree or filter. 
             // But we need to keep structure.
@@ -93,5 +93,9 @@ export const useMindMapData = () => {
         });
     }, []);
 
-    return { root, updateNodeText, addSibling, addChild, removeNodes };
+    const setRoot = (newRoot: MindMapNode) => {
+        setTreeRoot(newRoot);
+    };
+
+    return { root, updateNodeText, addSibling, addChild, removeNodes, setRoot };
 };

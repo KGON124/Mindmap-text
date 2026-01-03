@@ -9,25 +9,24 @@ export const exportMindMap = (node: MindMapNode, depth = 0): string => {
 
 export const exportMandala = (data: MandalaChartData): string => {
     // Center Grid
-    const centerTitle = data.centerGrid.cells[4].text || 'Untitled Mandala';
+    const centerTitle = data.centerGrid.cells[4].text || 'Untitled';
     let output = `# ${centerTitle}\n\n`;
 
-    // Main 3x3
-    output += `## Main Grid (★ Center)\n`;
+    // Main 3x3 (Center Grid)
+    // We use standard names for parsing: "Center Grid", "Top Left Grid", etc.
+    output += `## Center Grid\n`;
     data.centerGrid.cells.forEach((cell, index) => {
-        output += `- [${index}] ${cell.text}${index === 4 ? ' (★ CORE)' : ''}\n`;
+        output += `- [${index}] ${cell.text}\n`;
     });
     output += '\n';
 
     // Surrounding Grids
     data.surroundingGrids.forEach((grid, index) => {
-        // Skip if it corresponds to the center of main grid (which is index 4 of main grid, but here we just list them)
-        // Actually, usually 8 surrounding grids map to indices 0,1,2,3,5,6,7,8.
+        if (index === 4) return; // Skip the center placeholder, as it is exported as Main/Center Grid above
         const positionName = getPositionName(index);
-        const title = grid.cells[4].text; // Center of this grid
-        output += `## ${positionName} (${title})\n`;
+        output += `## ${positionName} Grid\n`;
         grid.cells.forEach((cell, cIndex) => {
-            output += `  - [${cIndex}] ${cell.text}\n`;
+            output += `- [${cIndex}] ${cell.text}\n`;
         });
         output += '\n';
     });
