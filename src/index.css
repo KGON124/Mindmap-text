@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg: #111827;
+    /* gray-900 */
+    --color-text: #f3f4f6;
+    /* gray-100 */
+    --color-primary: #818cf8;
+    /* indigo-400 */
+    --color-surface: #1f2937;
+    /* gray-800 */
+    --color-border: #374151;
+    /* gray-700 */
+  }
+
+  body {
+    @apply bg-gray-950 text-gray-100 antialiased;
+  }
+}
+
+/* Custom Glassmorphism Utilities */
+.glass {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl;
+}
+
+.glass-panel {
+  @apply bg-gray-900/60 backdrop-blur-md border border-gray-700/50 shadow-2xl rounded-xl;
+}
