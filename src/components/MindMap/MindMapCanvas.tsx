@@ -66,8 +66,20 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
             }
             setLastFocusedId(nextId);
         } else if (e.key === 'Enter') {
-            e.preventDefault();
-            addSibling(id);
+            if (e.shiftKey) {
+                e.preventDefault();
+                addSibling(id);
+            } else {
+                // Plain enter: do nothing or commit? 
+                // Currently inputs are controlled. 
+                // We might want to prevent default to stop "form submission" if any?
+                // Or just let it be. 
+                // User complaint: "Every time I input, node increases". 
+                // So now plain enter won't make a node.
+                // We can blur the input? 
+                // e.currentTarget.blur() might work but we are in a parent handler.
+                // For now, just stop adding sibling.
+            }
         } else if (e.key === 'Tab') {
             e.preventDefault();
             addChild(id);
@@ -137,7 +149,7 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
         <div className="flex flex-col h-full w-full max-w-4xl mx-auto p-4 gap-4">
             <div className="flex gap-4 items-center justify-between pop-card px-6 py-3">
                 <div className="text-sm text-slate-500 font-bold space-x-4 flex items-center">
-                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Enter</kbd> Sibling</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Enter</kbd> Sibling</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Opt+P</kbd> Parent</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Arr</kbd> Select</span>
