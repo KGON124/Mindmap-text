@@ -151,43 +151,8 @@ export const useMindMapData = () => {
                 isExpanded: true
             };
 
-            // 4. Move valid targets to newParent
-            const movingNodes: MindMapNode[] = [];
-
-            // We iterate over commonParent.children to maintain order
-            commonParent.children = commonParent.children.filter((c: MindMapNode) => {
-                if (targetsSet.has(c.id)) {
-                    movingNodes.push(c);
-                    return false;
-                }
-                return true;
-            });
-
-            newParent.children = movingNodes;
-
-            // 5. Insert newParent at the index of the first target
-            // We need to find where the first valid target *was*. 
-            // Since we just removed them, we can't find index easily unless we did it before filter.
-            // But actually, we can just insert it at the index where the first moving node was found.
-            // Let's refine step 4/5.
-
-            // Re-fetch parent to be safe? No, we are modifying `commonParent` in place (it's part of `clone`).
-
-            // To find the original insertion index, we should have found it before filtering.
-            // But `movingNodes` will be populated in order.
-            // If we just append `newParent` it might jump to end.
-            // Let's try to find the index of the *first target* in the *original* children list.
-
-            // Correction: Re-do step 4/5 logic more carefully.
-
-            // A better approach: 
-            // Create a new children array.
-            // Iterate original children.
-            // If child is a target -> Add to `newParent.children`, DO NOT add to `newChildren`.
-            // If it's the FIRST target found -> Add `newParent` to `newChildren`.
-            // If child is NOT a target -> Add to `newChildren`.
-
-            // But wait, if we have multiple targets, we only add `newParent` once (at position of first target).
+            // 4. Move targets to newParent and 5. Insert newParent at correct position
+            // We use a single pass to split children and insert the newParent at the first target's position.
 
             const originalChildren = [...commonParent.children];
             const newChildren: MindMapNode[] = [];
