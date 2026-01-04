@@ -14,9 +14,10 @@ interface Props {
     addSibling: (id: string) => void;
     addChild: (id: string) => void;
     removeNodes: (ids: string[]) => void;
+    insertParent: (targetIds: string[], text?: string) => void;
 }
 
-export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling, addChild, removeNodes }) => {
+export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling, addChild, removeNodes, insertParent }) => {
     // Local UI state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([root.id]));
     const [lastFocusedId, setLastFocusedId] = useState<string>(root.id); // For Shift+Click range anchor
@@ -96,6 +97,12 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                 removeNodes(Array.from(selectedIds));
                 setSelectedIds(new Set([safeId]));
                 setLastFocusedId(safeId);
+            }
+        } else if ((e.altKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+            // Insert Parent
+            e.preventDefault();
+            if (selectedIds.size > 0 && !selectedIds.has(root.id)) {
+                insertParent(Array.from(selectedIds));
             }
         }
     };
