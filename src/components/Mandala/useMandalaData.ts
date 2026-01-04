@@ -20,17 +20,29 @@ const createEmptyGrid = (idPrefix: string, title: string): MandalaGridData => {
 
 export const useMandalaData = () => {
     const [data, setData] = useState<MandalaChartData>(() => {
+        // [NEW] LocalStorage Load
+        const saved = localStorage.getItem('mandala-data-v1');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse saved Mandala data", e);
+            }
+        }
+
+        // Default Init
         const centerGrid = createEmptyGrid('center', 'Main Goal');
-        // Initialize 9 surrounding grids. Index 4 will be unused/null in the array logic usually
-        // or we just have 8 and map them.
-        // Let's use 9 for easier indexing, and ignore index 4 (center).
         const surroundingGrids = Array.from({ length: 9 }).map((_, i) => {
             if (i === 4) return createEmptyGrid('center-placeholder', 'Center'); // Placeholder
             return createEmptyGrid(`surrounding-${i}`, INITIAL_GRID_TITLES[i]);
         });
-
         return { centerGrid, surroundingGrids };
     });
+
+    // Helper to save to local storage
+    const saveData = (newData: MandalaChartData) => {
+        localStorage.setItem('mandala-data-v1', JSON.stringify(newData));
+    };
 
     // Sync logic: When Center Grid's outer cells change, update Surrounding Grid's center (index 4).
     // When Surrounding Grid's center changes, update Center Grid's outer cell.
@@ -76,17 +88,31 @@ export const useMandalaData = () => {
                 }
             }
 
+            saveData(next); // [NEW] Auto-save
             return next;
         });
     }, []);
 
     const setFullData = (newData: MandalaChartData) => {
         setData(newData);
+        saveData(newData); // [NEW] Auto-save on import
+    };
+
+    const resetData = () => {
+        const centerGrid = createEmptyGrid('center', 'Main Goal');
+        const surroundingGrids = Array.from({ length: 9 }).map((_, i) => {
+            if (i === 4) return createEmptyGrid('center-placeholder', 'Center');
+            return createEmptyGrid(`surrounding-${i}`, INITIAL_GRID_TITLES[i]);
+        });
+        const initialData = { centerGrid, surroundingGrids };
+        setData(initialData);
+        saveData(initialData);
     };
 
     return {
         data,
         updateCell,
-        setFullData
+        setFullData,
+        resetData
     };
 };

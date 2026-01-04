@@ -133,19 +133,34 @@ function App() {
               onChange={(e) => setImportText(e.target.value)}
             />
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-between items-center pt-2">
               <button
-                onClick={() => setIsImportOpen(false)}
-                className="pop-btn pop-btn-neutral"
+                onClick={() => {
+                  if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+                    if (mode === 'mandala') mandalaHook.resetData();
+                    else mindMapHook.resetData();
+                    setIsImportOpen(false);
+                  }
+                }}
+                className="text-xs font-bold text-red-400 hover:text-red-500 hover:underline px-2"
               >
-                Cancel
+                🗑 Clear All Data
               </button>
-              <button
-                onClick={handleImport}
-                className="pop-btn pop-btn-blue px-8 hover:shadow-lg hover:shadow-blue-200/50"
-              >
-                RESTORE
-              </button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsImportOpen(false)}
+                  className="pop-btn pop-btn-neutral"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleImport}
+                  className="pop-btn pop-btn-blue px-8 hover:shadow-lg hover:shadow-blue-200/50"
+                >
+                  RESTORE
+                </button>
+              </div>
             </div>
           </div>
         </div>

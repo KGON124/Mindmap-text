@@ -10,7 +10,22 @@ const INITIAL_TREE: MindMapNode = {
 };
 
 export const useMindMapData = () => {
-    const [root, setTreeRoot] = useState<MindMapNode>(INITIAL_TREE);
+    const [root, setTreeRoot] = useState<MindMapNode>(() => {
+        // [NEW] LocalStorage Load
+        const saved = localStorage.getItem('mindmap-data-v1');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse saved MindMap data", e);
+            }
+        }
+        return INITIAL_TREE;
+    });
+
+    const saveRoot = (newRoot: MindMapNode) => {
+        localStorage.setItem('mindmap-data-v1', JSON.stringify(newRoot));
+    };
 
     // Helper to find node and parent
     // We might not need parent often if we pass it down or search, but for deletion/sibling creation we do.
@@ -32,6 +47,7 @@ export const useMindMapData = () => {
                 const target = path[path.length - 1];
                 target.text = text;
             }
+            saveRoot(clone); // [NEW] Auto-save
             return clone;
         });
     }, []);
@@ -46,6 +62,7 @@ export const useMindMapData = () => {
                 const index = parent.children.findIndex((n: MindMapNode) => n.id === referenceId);
                 const newNode: MindMapNode = { id: uuidv4(), text: 'New Node', children: [] };
                 parent.children.splice(index + 1, 0, newNode);
+                saveRoot(clone); // [NEW] Auto-save
                 return clone;
             }
             return clone;
@@ -61,6 +78,7 @@ export const useMindMapData = () => {
                 const newNode: MindMapNode = { id: uuidv4(), text: 'New Child', children: [] };
                 target.children.push(newNode);
                 target.isExpanded = true;
+                saveRoot(clone); // [NEW] Auto-save
                 return clone;
             }
             return clone;
@@ -89,13 +107,20 @@ export const useMindMapData = () => {
             };
 
             removeRecursive(clone);
+            saveRoot(clone); // [NEW] Auto-save
             return clone;
         });
     }, []);
 
     const setRoot = (newRoot: MindMapNode) => {
         setTreeRoot(newRoot);
+        saveRoot(newRoot); // [NEW] Auto-save
     };
 
-    return { root, updateNodeText, addSibling, addChild, removeNodes, setRoot };
+    const resetData = () => {
+        setTreeRoot(INITIAL_TREE);
+        saveRoot(INITIAL_TREE);
+    };
+
+    return { root, updateNodeText, addSibling, addChild, removeNodes, setRoot, resetData };
 };
