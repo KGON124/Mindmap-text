@@ -76,7 +76,7 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
         alert('Copied to clipboard!');
     };
 
-    const handleMobileGridSelect = (gridIdx: number, cellIdx: number) => {
+    const handleMobileGridSelect = (cellIdx: number) => {
         if (!isMobile) return;
 
         // If we represent the Center Grid (4), tapping a cell should go to that surrounding grid
@@ -158,7 +158,7 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
                                         isCenter={isCenterCell}
                                         isCore={isAbsoluteCore}
                                         // On mobile center grid, tapping acts as navigation
-                                        onClickProp={isMobile && isCenterGrid && !isCenterCell ? () => handleMobileGridSelect(gridIdx, cellIdx) : undefined}
+                                        onClickProp={isMobile && isCenterGrid && !isCenterCell ? () => handleMobileGridSelect(cellIdx) : undefined}
                                         onChange={(val) => updateCell(isCenterGrid ? 'center' : 'surrounding', gridIdx, cellIdx, val)}
                                         onKeyDown={(e) => handleKeyDown(e, gridIdx, cellIdx)}
                                         onFocus={() => {
