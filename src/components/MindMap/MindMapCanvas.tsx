@@ -98,7 +98,7 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                 setSelectedIds(new Set([safeId]));
                 setLastFocusedId(safeId);
             }
-        } else if ((e.altKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        } else if ((e.altKey || e.metaKey) && (e.code === 'KeyP')) {
             // Insert Parent
             e.preventDefault();
             if (selectedIds.size > 0 && !selectedIds.has(root.id)) {
@@ -139,6 +139,7 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                 <div className="text-sm text-slate-500 font-bold space-x-4 flex items-center">
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Enter</kbd> Sibling</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Opt+P</kbd> Parent</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Arr</kbd> Select</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Ctrl+Del</kbd> Delete</span>
                 </div>
