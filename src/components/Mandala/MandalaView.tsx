@@ -11,16 +11,20 @@ interface Props {
 
 export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
     const [focused, setFocused] = useState<{ grid: number; cell: number } | null>(null);
-    // We treat the whole 9x9 as a grid of grids.
-    // 0-8 are the grids. 4 is the Center Grid.
-    // Cell 0-8 within that grid.
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [mobileActiveGrid, setMobileActiveGrid] = useState(4); // Default to Center Grid
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Helper to handle navigation
     const handleKeyDown = (e: React.KeyboardEvent, gridIdx: number, cellIdx: number) => {
-        // Current Global Position
-        // We can map everything to global coordinates (0-8, 0-8)
-        // Grid (gx, gy) 3x3. Cell (cx, cy) 3x3.
-        // Global X = gx * 3 + cx. Global Y = gy * 3 + cy.
+        // ... (Navigation Logic kept mostly same, but need to consider mobile visibility?)
+        // For MVP, focus logic works internally, but visual might jump.
+        // Let's keep existing logic.
 
         // Grid Index -> gx, gy
         const gx = gridIdx % 3;
@@ -59,6 +63,11 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
 
         e.preventDefault();
         setFocused({ grid: nextGridIndex, cell: nextCellIndex });
+
+        // [Mobile] If navigating to another grid, switch view
+        if (isMobile && nextGridIndex !== mobileActiveGrid) {
+            setMobileActiveGrid(nextGridIndex);
+        }
     };
 
     const copyToClipboard = () => {
@@ -67,20 +76,54 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
         alert('Copied to clipboard!');
     };
 
+    const handleMobileGridSelect = (gridIdx: number, cellIdx: number) => {
+        if (!isMobile) return;
+
+        // If we represent the Center Grid (4), tapping a cell should go to that surrounding grid
+        if (mobileActiveGrid === 4) {
+            // Map cell index to grid index logic?
+            // Actually, cell index 0 in center grid -> Surrounding Grid 0
+            // Cell index 4 in center grid -> Center Grid (Self)
+            // So simply: setMobileActiveGrid(cellIdx);
+            setMobileActiveGrid(cellIdx);
+        }
+    };
+
     return (
         <div className="flex flex-col items-center h-full w-full overflow-auto p-4 gap-6">
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center justify-between w-full max-w-4xl px-2">
+                {/* Mobile Navigation */}
+                {isMobile && mobileActiveGrid !== 4 && (
+                    <button
+                        onClick={() => setMobileActiveGrid(4)}
+                        className="pop-btn pop-btn-orange text-sm px-4 py-2 shadow-lg animate-bounce-subtle"
+                    >
+                        ⬅ Back to Center
+                    </button>
+                )}
+
+                <div className="flex-1"></div>
+
                 <button
                     onClick={copyToClipboard}
-                    className="pop-btn pop-btn-neutral text-sm"
+                    className="pop-btn pop-btn-neutral text-sm whitespace-nowrap"
                 >
-                    📋 Export / Copy Text
+                    📋 Export
                 </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 p-4 ">
-                {/* We render 9 Grids. No outer decorative container, just the grids floating or in a subtle group */}
+            {/* Context Title for Mobile */}
+            {isMobile && mobileActiveGrid !== 4 && (
+                <div className="text-xl font-bold text-pop-text animate-fadeIn">
+                    Target: <span className="text-pop-blue">{data.centerGrid.cells[mobileActiveGrid].text || `Grid ${mobileActiveGrid}`}</span>
+                </div>
+            )}
+
+            <div className={`grid gap-4 p-4 transition-all duration-300 ${isMobile ? 'grid-cols-1 w-full max-w-sm' : 'grid-cols-3 max-w-5xl'}`}>
                 {Array.from({ length: 9 }).map((_, gridIdx) => {
+                    // [Mobile Visibility Logic]
+                    if (isMobile && gridIdx !== mobileActiveGrid) return null;
+
                     let gridData: MandalaGridData;
                     let isCenterGrid = false;
 
@@ -94,7 +137,7 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
                     return (
                         <div
                             key={gridIdx}
-                            className={`grid grid-cols-3 gap-1 p-2 rounded-2xl border-4 transition-all duration-300 shadow-sm ${isCenterGrid
+                            className={`grid grid-cols-3 gap-1 p-2 rounded-2xl border-4 transition-all duration-300 shadow-sm animate-popIn ${isCenterGrid
                                 ? 'bg-orange-50 border-pop-orange shadow-orange-100'
                                 : 'bg-white border-white shadow-slate-200/50'
                                 }`}
@@ -114,9 +157,15 @@ export const MandalaView: React.FC<Props> = ({ data, updateCell }) => {
                                         isFocused={isFocused}
                                         isCenter={isCenterCell}
                                         isCore={isAbsoluteCore}
+                                        // On mobile center grid, tapping acts as navigation
+                                        onClickProp={isMobile && isCenterGrid && !isCenterCell ? () => handleMobileGridSelect(gridIdx, cellIdx) : undefined}
                                         onChange={(val) => updateCell(isCenterGrid ? 'center' : 'surrounding', gridIdx, cellIdx, val)}
                                         onKeyDown={(e) => handleKeyDown(e, gridIdx, cellIdx)}
-                                        onFocus={() => setFocused({ grid: gridIdx, cell: cellIdx })}
+                                        onFocus={() => {
+                                            setFocused({ grid: gridIdx, cell: cellIdx });
+                                            // Ensure visible on focus (keyboard nav)
+                                            if (isMobile && gridIdx !== mobileActiveGrid) setMobileActiveGrid(gridIdx);
+                                        }}
                                         placeholder={isAbsoluteCore ? 'MAIN GOAL' : ''}
                                     />
                                 );
@@ -138,9 +187,10 @@ interface CellProps {
     onKeyDown: (e: React.KeyboardEvent) => void;
     onFocus: () => void;
     placeholder?: string;
+    onClickProp?: () => void; // New prop for custom click handling (e.g. mobile nav)
 }
 
-const Cell: React.FC<CellProps> = ({ text, isFocused, isCenter, isCore, onChange, onKeyDown, onFocus, placeholder }) => {
+const Cell: React.FC<CellProps> = ({ text, isFocused, isCenter, isCore, onChange, onKeyDown, onFocus, placeholder, onClickProp }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const [editMode, setEditMode] = useState(false);
@@ -211,7 +261,14 @@ const Cell: React.FC<CellProps> = ({ text, isFocused, isCenter, isCore, onChange
     return (
         <div
             className={`${baseClasses} ${colorClasses}`}
-            onClick={() => { onFocus(); setEditMode(true); }}
+            onClick={() => {
+                if (onClickProp) {
+                    onClickProp();
+                } else {
+                    onFocus();
+                    setEditMode(true);
+                }
+            }}
         >
             {editMode ? (
                 <textarea

@@ -51,14 +51,14 @@ function App() {
     <div className="flex flex-col h-screen overflow-hidden font-sans">
       {/* Header with Floating Island Style */}
       <div className="p-4 z-10 shrink-0 flex justify-center w-full pointer-events-none">
-        <header className="pointer-events-auto pop-card px-6 py-3 flex justify-between items-center w-full max-w-6xl shadow-xl shadow-slate-300/40">
+        <header className="pointer-events-auto pop-card px-6 py-3 flex flex-col md:flex-row justify-between items-center w-full max-w-6xl shadow-xl shadow-slate-300/40 gap-4 md:gap-0">
           <h1 className="text-2xl font-black text-pop-text tracking-tight flex items-center gap-2">
             <span className="text-3xl">🧩</span>
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-pop-blue to-pop-orange">
               MindMap & Mandala
             </span>
           </h1>
-          <div className="flex gap-3">
+          <div className="flex gap-3 w-full md:w-auto justify-center">
             <button
               onClick={() => setIsImportOpen(true)}
               className="pop-btn pop-btn-neutral font-bold text-sm"
