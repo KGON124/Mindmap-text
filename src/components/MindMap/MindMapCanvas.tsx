@@ -146,8 +146,8 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
     // Let's say: If size=1, show cursor/input. If size>1, show highlight only.
 
     return (
-        <div className="flex flex-col h-full w-full max-w-4xl mx-auto p-4 gap-4">
-            <div className="flex gap-4 items-center justify-between pop-card px-6 py-3">
+        <div className="flex flex-col h-full w-full mx-auto p-4 gap-4">
+            <div className="flex gap-4 items-center justify-between pop-card px-6 py-3 w-full max-w-4xl mx-auto">
                 <div className="text-sm text-slate-500 font-bold space-x-4 flex items-center">
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Enter</kbd> Sibling</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
