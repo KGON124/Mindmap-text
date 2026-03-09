@@ -13,14 +13,16 @@ interface Props {
     updateNodeText: (id: string, text: string) => void;
     addSibling: (id: string) => void;
     addChild: (id: string) => void;
+    addChildren: (id: string, texts: string[]) => void;
     removeNodes: (ids: string[]) => void;
     insertParent: (targetIds: string[], text?: string) => void;
 }
 
-export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling, addChild, removeNodes, insertParent }) => {
+export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling, addChild, addChildren, removeNodes, insertParent }) => {
     // Local UI state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set([root.id]));
     const [lastFocusedId, setLastFocusedId] = useState<string>(root.id); // For Shift+Click range anchor
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         // Reset selection if root changes (e.g. import)
@@ -39,6 +41,33 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
         return list;
     }, []);
 
+    const handleAutoExpand = async (id: string, text: string) => {
+        setIsGenerating(true);
+        try {
+            // Wikipedia OpenSearch API (JA)
+            // limit=10 to fetch enough candidates, then we slice to 3
+            const res = await fetch(`https://ja.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(text)}&limit=10&format=json&origin=*`);
+            const data = await res.json();
+            // data[1] contains keywords
+            // Filter out the query itself to avoid duplication
+            const keywords = (data[1] as string[]).filter(k => k !== text && !k.includes(text + ' '));
+
+            // Limit to 3 items
+            const limitedKeywords = keywords.slice(0, 3);
+
+            if (limitedKeywords.length > 0) {
+                addChildren(id, limitedKeywords);
+            } else {
+                alert('No related terms found.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to fetch related terms.');
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
         // Navigation
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -56,10 +85,6 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                 const newSet = new Set(selectedIds);
                 newSet.add(nextId);
                 setSelectedIds(newSet);
-                // We also want to keep 'id' selected if we are extending.
-                // Simplified Logic: If Shift is held, we just toggle or add the target?
-                // Standard behavior: Selection Anchor -> Target.
-                // MVP: Just add nextId to selection.
             } else {
                 // Clear and move
                 setSelectedIds(new Set([nextId]));
@@ -69,16 +94,6 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
             if (e.shiftKey) {
                 e.preventDefault();
                 addSibling(id);
-            } else {
-                // Plain enter: do nothing or commit? 
-                // Currently inputs are controlled. 
-                // We might want to prevent default to stop "form submission" if any?
-                // Or just let it be. 
-                // User complaint: "Every time I input, node increases". 
-                // So now plain enter won't make a node.
-                // We can blur the input? 
-                // e.currentTarget.blur() might work but we are in a parent handler.
-                // For now, just stop adding sibling.
             }
         } else if (e.key === 'Tab') {
             e.preventDefault();
@@ -86,14 +101,9 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
         } else if ((e.key === 'Backspace' || e.key === 'Delete') && (e.ctrlKey || e.metaKey)) {
             // Delete all selected
             if (selectedIds.size > 0 && !selectedIds.has(root.id)) {
-                // Calculate valid new focus before delete
-                // If we delete what we are focused on, we need to move focus up.
                 const visible = getVisibleNodes(root);
-                // Find a safe node (first non-selected parent or sibling above)
-                // Rough guess: find index of focused ID, go up until not in selection.
                 let safeId = root.id;
                 let foundSafe = false;
-                // Reverse search from current index
                 const currentIdx = visible.findIndex((n: MindMapNode) => n.id === lastFocusedId);
                 if (currentIdx > 0) {
                     for (let i = currentIdx - 1; i >= 0; i--) {
@@ -121,8 +131,6 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
 
     const handleNodeClick = (e: React.MouseEvent, id: string) => {
         if (e.shiftKey) {
-            // Range select? Or just compatible multi-select
-            // Simple toggle for now
             const newSet = new Set(selectedIds);
             if (newSet.has(id)) newSet.delete(id);
             else newSet.add(id);
@@ -140,11 +148,6 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
         alert('Copied to clipboard!');
     };
 
-    // We need to determine "focused" for input.
-    // We only show input cursor if SINGLE selection?
-    // Or always? If multiple selected, we probably shouldn't edit text of one easily.
-    // Let's say: If size=1, show cursor/input. If size>1, show highlight only.
-
     return (
         <div className="flex flex-col h-full w-full mx-auto p-4 gap-4">
             <div className="flex gap-4 items-center justify-between pop-card px-6 py-3 w-full max-w-4xl mx-auto">
@@ -152,8 +155,6 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Enter</kbd> Sibling</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Opt+P</kbd> Parent</span>
-                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Arr</kbd> Select</span>
-                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Ctrl+Del</kbd> Delete</span>
                 </div>
                 <button
                     onClick={copyToClipboard}
@@ -163,8 +164,13 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                 </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-8 popup-container">
-                {/* No background panel for the map itself to feel "infinite" or clean */}
+            <div className="flex-1 overflow-auto p-8 popup-container relative">
+                {isGenerating && (
+                    <div className="absolute top-4 right-4 bg-white p-2 rounded-lg shadow-lg border border-pop-orange animate-pulse z-50 flex items-center gap-2">
+                        <span className="animate-spin text-xl">✨</span>
+                        <span className="text-xs font-bold text-pop-orange-dark">Generating...</span>
+                    </div>
+                )}
                 <NodeView
                     node={root}
                     selectedIds={selectedIds}
@@ -172,6 +178,7 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                     onSelect={handleNodeClick}
                     onUpdate={updateNodeText}
                     onKeyDown={handleKeyDown}
+                    onAutoExpand={handleAutoExpand}
                     depth={0}
                 />
             </div>
@@ -186,10 +193,11 @@ interface NodeProps {
     onSelect: (e: React.MouseEvent, id: string) => void;
     onUpdate: (id: string, text: string) => void;
     onKeyDown: (e: React.KeyboardEvent, id: string) => void;
+    onAutoExpand: (id: string, text: string) => void;
     depth: number;
 }
 
-const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSelect, onUpdate, onKeyDown, depth }) => {
+const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSelect, onUpdate, onKeyDown, onAutoExpand, depth }) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const isSelected = selectedIds.has(node.id);
     const isMultiSelecting = selectedIds.size > 1;
@@ -198,64 +206,71 @@ const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSel
     useEffect(() => {
         if (isFocused) {
             inputRef.current?.focus();
+            inputRef.current?.select();
         }
     }, [isFocused]);
 
     return (
         <div className="flex items-center">
             {/* Node Card */}
-            <div
-                className={`relative z-10 flex items-center p-3 rounded-full border-2 transition-all duration-200 cursor-pointer shadow-sm min-w-[120px] max-w-[240px] ${isSelected
-                    ? 'bg-white border-pop-blue ring-4 ring-pop-blue-light/40 shadow-xl shadow-blue-200 scale-105'
-                    : 'bg-white border-slate-200 hover:border-pop-blue-light hover:shadow-lg hover:-translate-y-0.5'
-                    }`}
-                onClick={(e) => onSelect(e, node.id)}
-            >
-                {isFocused ? (
-                    <input
-                        ref={inputRef}
-                        value={node.text}
-                        onChange={(e) => onUpdate(node.id, e.target.value)}
-                        onKeyDown={(e) => onKeyDown(e, node.id)}
-                        className="bg-transparent border-none focus:outline-none w-full text-pop-text text-center font-bold"
-                    />
-                ) : (
-                    <div
-                        className={`w-full text-center outline-none break-words ${isSelected ? 'text-pop-blue-dark font-black' : 'text-slate-600 font-bold'}`}
-                        tabIndex={isSelected ? 0 : -1}
-                        onKeyDown={(e) => isSelected && onKeyDown(e, node.id)}
-                        ref={(el) => { if (isSelected && lastFocusedId === node.id) el?.focus(); }}
+            <div className="relative group">
+                <div
+                    className={`relative z-10 flex items-center p-3 rounded-full border-2 transition-all duration-200 cursor-pointer shadow-sm min-w-[120px] max-w-[240px] pr-8 ${isSelected
+                        ? 'bg-white border-pop-blue ring-4 ring-pop-blue-light/40 shadow-xl shadow-blue-200 scale-105'
+                        : 'bg-white border-slate-200 hover:border-pop-blue-light hover:shadow-lg hover:-translate-y-0.5'
+                        }`}
+                    onClick={(e) => onSelect(e, node.id)}
+                >
+                    {isFocused ? (
+                        <input
+                            ref={inputRef}
+                            value={node.text}
+                            onChange={(e) => onUpdate(node.id, e.target.value)}
+                            onKeyDown={(e) => onKeyDown(e, node.id)}
+                            className="bg-transparent border-none focus:outline-none w-full text-pop-text text-center font-bold"
+                        />
+                    ) : (
+                        <div
+                            className={`w-full text-center outline-none break-words ${isSelected ? 'text-pop-blue-dark font-black' : 'text-slate-600 font-bold'}`}
+                            tabIndex={isSelected ? 0 : -1}
+                            onKeyDown={(e) => isSelected && onKeyDown(e, node.id)}
+                            ref={(el) => { if (isSelected && lastFocusedId === node.id) el?.focus(); }}
+                        >
+                            {node.text}
+                        </div>
+                    )}
+                </div>
+
+                {/* Magic Expand Button - Visible on Hover or Selection */}
+                {(isSelected || 'group-hover:opacity-100') && (
+                    <button
+                        className={`absolute -top-3 -right-3 z-20 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-pop-orange to-pop-orange-dark text-white shadow-lg shadow-orange-200/50 hover:scale-110 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onAutoExpand(node.id, node.text);
+                        }}
+                        title="Mind Tree Bubble: Auto-generate children"
                     >
-                        {node.text}
-                    </div>
+                        ✨
+                    </button>
                 )}
             </div>
 
             {/* Children Group */}
             {node.children && node.children.length > 0 && (
                 <div className="flex items-center">
-                    {/* Horizontal Connector from Parent to Children Column */}
                     <div className="w-8 h-[3px] bg-slate-300 rounded-full"></div>
-
-                    {/* Children Column */}
                     <div className="flex flex-col gap-4 relative">
-                        {/* Vertical Line for branching */}
-                        {/* Logic: Vertical backbone on the left edge of the children column */}
-
                         {node.children.map((child, idx) => (
                             <div key={child.id} className="relative flex items-center">
-                                {/* Vertical Line Segment */}
                                 {node.children.length > 1 && (
                                     <div className={`absolute left-0 w-[3px] bg-slate-300 ${idx === 0 ? 'h-1/2 top-1/2 rounded-tl-full' :
                                         idx === node.children.length - 1 ? 'h-1/2 bottom-1/2 rounded-bl-full' : 'h-full'
                                         }`}></div>
                                 )}
-
-                                {/* Horizontal Line to Child */}
                                 {node.children.length > 0 && (
                                     <div className="w-8 h-[3px] bg-slate-300 rounded-r-full"></div>
                                 )}
-
                                 <NodeView
                                     node={child}
                                     selectedIds={selectedIds}
@@ -263,6 +278,7 @@ const NodeView: React.FC<NodeProps> = ({ node, selectedIds, lastFocusedId, onSel
                                     onSelect={onSelect}
                                     onUpdate={onUpdate}
                                     onKeyDown={onKeyDown}
+                                    onAutoExpand={onAutoExpand}
                                     depth={depth + 1}
                                 />
                             </div>

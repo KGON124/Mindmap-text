@@ -85,6 +85,24 @@ export const useMindMapData = () => {
         });
     }, []);
 
+    const addChildren = useCallback((parentId: string, texts: string[]) => {
+        setTreeRoot(prev => {
+            const clone = JSON.parse(JSON.stringify(prev));
+            const path = findNodePath(clone, parentId);
+            if (path) {
+                const target = path[path.length - 1];
+                texts.forEach(text => {
+                    const newNode: MindMapNode = { id: uuidv4(), text, children: [] };
+                    target.children.push(newNode);
+                });
+                target.isExpanded = true;
+                saveRoot(clone);
+                return clone;
+            }
+            return clone;
+        });
+    }, []);
+
     const removeNodes = useCallback((ids: string[]) => {
         setTreeRoot(prev => {
             // Recursive filter? Or just traverse and splice.
@@ -184,5 +202,5 @@ export const useMindMapData = () => {
         saveRoot(INITIAL_TREE);
     };
 
-    return { root, updateNodeText, addSibling, addChild, removeNodes, insertParent, setRoot, resetData };
+    return { root, updateNodeText, addSibling, addChild, addChildren, removeNodes, insertParent, setRoot, resetData };
 };

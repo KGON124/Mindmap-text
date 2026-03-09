@@ -103,6 +103,7 @@ function App() {
               addChild={mindMapHook.addChild}
               removeNodes={mindMapHook.removeNodes}
               insertParent={mindMapHook.insertParent}
+              addChildren={mindMapHook.addChildren}
             />
           )}
         </div>
