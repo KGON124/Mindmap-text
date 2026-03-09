@@ -105,23 +105,31 @@ export const useMindMapData = () => {
 
     const removeNodes = useCallback((ids: string[]) => {
         setTreeRoot(prev => {
-            // Recursive filter? Or just traverse and splice.
-            // Easier to rebuild tree or filter. 
-            // But we need to keep structure.
-            // Better: traverse and remove children that match ID.
-
             const clone = JSON.parse(JSON.stringify(prev));
             const idsSet = new Set(ids);
 
             if (idsSet.has(clone.id)) return clone; // Cannot remove root
 
-            // Helper to remove recursively
+            // Helper to remove recursively and promote children
             const removeRecursive = (node: MindMapNode) => {
                 if (!node.children) return;
-                // Filter children
-                node.children = node.children.filter(child => !idsSet.has(child.id));
-                // Recurse
+
+                // First process all children bottom-up
                 node.children.forEach(removeRecursive);
+
+                // Then filter or promote at this level
+                const newChildren: MindMapNode[] = [];
+                for (const child of node.children) {
+                    if (idsSet.has(child.id)) {
+                        // Node is deleted, promote its children
+                        if (child.children) {
+                            newChildren.push(...child.children);
+                        }
+                    } else {
+                        newChildren.push(child);
+                    }
+                }
+                node.children = newChildren;
             };
 
             removeRecursive(clone);

@@ -155,6 +155,7 @@ export const MindMapView: React.FC<Props> = ({ root, updateNodeText, addSibling,
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Shift+Enter</kbd> Sibling</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Tab</kbd> Child</span>
                     <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">Opt+P</kbd> Parent</span>
+                    <span className="flex items-center gap-1"><kbd className="bg-slate-100 border-b-2 border-slate-300 px-2 py-1 rounded-lg text-slate-600 font-mono text-xs">⌘+Del</kbd> Delete</span>
                 </div>
                 <button
                     onClick={copyToClipboard}
